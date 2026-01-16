@@ -13,35 +13,56 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 #define TVM_PROGRAM_CAPACITY 1024
 
-typedef uint64_t Memory_addr;
+typedef uint32_t Memory_addr;
 
 typedef enum {
-  OP_PUSH,
+  OP_PUSH_INT,
+  OP_PUSH_FLOAT,
+
   OP_POP,
+  
   OP_DUP,
 
-  OP_PLUS,
-  OP_MINUS,
-  OP_MULT,
-  OP_DIV,
+  OP_PLUS_INT,
+  OP_MINUS_INT,
+  OP_MULT_INT,
+  OP_DIV_INT,
+
+  OP_PLUS_FLOAT,
+  OP_MINUS_FLOAT,
+  OP_MULT_FLOAT,
+  OP_DIV_FLOAT,
 
   OP_JMP,
   OP_JZ,
   OP_JNZ,
 
-  OP_LT,
-  OP_GT,
-  OP_EQ,
+  OP_LT_INT,
+  OP_GT_INT,
+  OP_EQ_INT,
 
-  OP_LOAD,
+
+  OP_LT_FLOAT,
+  OP_GT_FLOAT,
+  OP_EQ_FLOAT,
+
+
   OP_STORE,
+  OP_LOAD_INT,
+  OP_LOAD_FLOAT,
 
   OP_HALT,
 } Instr_type;
 
+typedef union {
+  int64_t i64;
+  double f64;
+}Operand;
+
+
 typedef struct {
   Instr_type type;
-  int64_t operand;
+  Operand operand;
 } Instruction;
 
 typedef enum {
@@ -51,7 +72,7 @@ typedef enum {
   TRAP_STACK_OVERFLOW,
   TRAP_STACK_UNDERFLOW,
   TRAP_DIVISION_BY_ZERO,
-
+  
   TRAP_ILLEGAL_MEMORY_ACCESS,
 } Trap;
 
@@ -63,6 +84,8 @@ char *trap_to_cstr(Trap trap) {
     return "TRAP_ILLEGAL_INSTR";
   case TRAP_ILLEGAL_INSTR_ACCESS:
     return "TRAP_ILLEGAL_INSTR_ACCESS";
+  case TRAP_ILLEGAL_MEMORY_ACCESS:
+    return "TRAP_ILLEGAL_MEMORY_ACCESS";
   case TRAP_STACK_OVERFLOW:
     return "TRAP_STACK_OVERFLOW";
   case TRAP_STACK_UNDERFLOW:
@@ -75,15 +98,39 @@ char *trap_to_cstr(Trap trap) {
   }
 }
 
+typedef struct{
+  int64_t bits;
+  bool is_float;
+}StackValue;
+
+
+
+
 typedef struct {
-  int64_t stack[STACK_SIZE];
+  StackValue stack[STACK_SIZE];
   uint16_t sp;
   Instruction program[TVM_PROGRAM_CAPACITY];
-  int program_size;
+  uint16_t program_size;
   uint16_t ip;
   uint8_t memory[HEAP_SIZE];
   bool halt;
 } TVM;
+
+
+int64_t f64_to_bits(double val){
+  int64_t tmp;
+  memcpy(&tmp, &val, sizeof(double));
+  return tmp;
+}
+
+
+double bits_to_f64(int64_t val){
+  double tmp;
+  memcpy(&tmp, &val, sizeof(int64_t));
+  return tmp;
+}
+
+
 
 Trap tvm_execute_instr(TVM *tvm) {
   if (tvm->ip >= tvm->program_size) {
@@ -93,14 +140,25 @@ Trap tvm_execute_instr(TVM *tvm) {
   Instruction instr = tvm->program[tvm->ip];
 
   switch (instr.type) {
-  case OP_PUSH: {
+  case OP_PUSH_INT: {
     if (tvm->sp >= STACK_SIZE) {
       return TRAP_STACK_OVERFLOW;
     }
-    tvm->stack[tvm->sp++] = instr.operand;
+    tvm->stack[tvm->sp++] = (StackValue){.bits = instr.operand.i64, .is_float = false};
     tvm->ip++;
     break;
   }
+
+
+  case OP_PUSH_FLOAT: {
+    if (tvm->sp >= STACK_SIZE) {
+      return TRAP_STACK_OVERFLOW;
+    }
+    tvm->stack[tvm->sp++] = (StackValue){.bits = f64_to_bits(instr.operand.f64), .is_float = true};  //because our stack is int64_t we need use IEEE 754
+    tvm->ip++;
+    break;
+  }
+
   case OP_POP: {
     if (tvm->sp < 1) {
       return TRAP_STACK_UNDERFLOW;
@@ -112,68 +170,129 @@ Trap tvm_execute_instr(TVM *tvm) {
 
   case OP_DUP: {
     if (tvm->sp < 1) {
+      fprintf(stderr, "Stack underflow at IP: %d\n", tvm->ip);
       return TRAP_STACK_UNDERFLOW;
     }
     if (tvm->sp >= STACK_SIZE) {
       return TRAP_STACK_OVERFLOW;
     }
 
-    int64_t top = tvm->stack[tvm->sp - 1];
-    tvm->stack[tvm->sp++] = top;
+    tvm->stack[tvm->sp++] = tvm->stack[tvm->sp - 1];
     tvm->ip++;
     break;
   }
 
-  case OP_PLUS: {
+
+
+
+  case OP_PLUS_INT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
-    int64_t a = tvm->stack[--tvm->sp];
-    int64_t b = tvm->stack[--tvm->sp];
-    tvm->stack[tvm->sp++] = b + a;
+    int64_t a = tvm->stack[--tvm->sp].bits;
+    int64_t b = tvm->stack[--tvm->sp].bits;
+    tvm->stack[tvm->sp++] = (StackValue){.bits = b + a, .is_float = false};
     tvm->ip++;
     break;
   }
-  case OP_MINUS: {
+
+
+  case OP_PLUS_FLOAT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    tvm->stack[tvm->sp++] = (StackValue){.bits = f64_to_bits(b + a), .is_float = true};
+    tvm->ip++;
+    break;
+  }
+
+
+  
+  case OP_MINUS_INT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
 
-    int64_t a = tvm->stack[--tvm->sp];
-    int64_t b = tvm->stack[--tvm->sp];
-    tvm->stack[tvm->sp++] = b - a;
+    int64_t a = tvm->stack[--tvm->sp].bits;
+    int64_t b = tvm->stack[--tvm->sp].bits;
+    tvm->stack[tvm->sp++] =(StackValue){.bits = b - a, .is_float = false};
     tvm->ip++;
     break;
   }
-  case OP_MULT: {
+
+
+  case OP_MINUS_FLOAT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
-    int64_t a = tvm->stack[--tvm->sp];
-    int64_t b = tvm->stack[--tvm->sp];
-    tvm->stack[tvm->sp++] = b * a;
+
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    tvm->stack[tvm->sp++] = (StackValue){.bits = f64_to_bits(b - a), .is_float =true};
     tvm->ip++;
     break;
   }
-  case OP_DIV: {
+
+  
+  case OP_MULT_INT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
-    int64_t a = tvm->stack[--tvm->sp];
+    int64_t a = tvm->stack[--tvm->sp].bits;
+    int64_t b = tvm->stack[--tvm->sp].bits;
+    tvm->stack[tvm->sp++] = (StackValue) {.bits = b * a, .is_float = false};
+    tvm->ip++;
+    break;
+  }
+
+  
+  case OP_MULT_FLOAT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    tvm->stack[tvm->sp++] = (StackValue){.bits = f64_to_bits(b * a), .is_float = true};
+    tvm->ip++;
+    break;
+  }
+
+
+  
+  case OP_DIV_INT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+    int64_t a = tvm->stack[--tvm->sp].bits;
     if (a == 0) {
       return TRAP_DIVISION_BY_ZERO;
     }
-    int64_t b = tvm->stack[--tvm->sp];
-    tvm->stack[tvm->sp++] = b / a;
+    int64_t b = tvm->stack[--tvm->sp].bits;
+    tvm->stack[tvm->sp++] = (StackValue) {.bits = b / a, .is_float = false} ;
     tvm->ip++;
     break;
   }
 
+
+  case OP_DIV_FLOAT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    tvm->stack[tvm->sp++] = (StackValue) {.bits = f64_to_bits(b / a), .is_float = true};
+    tvm->ip++;
+    break;
+  }
+
+
   case OP_JMP: {
-    if (instr.operand < 0 || instr.operand >= tvm->program_size) {
+    if (instr.operand.i64 < 0 || instr.operand.i64  >= tvm->program_size) {
       return TRAP_ILLEGAL_INSTR_ACCESS;
     }
-    tvm->ip = instr.operand;
+    tvm->ip = instr.operand.i64;
     break;
   }
 
@@ -182,12 +301,12 @@ Trap tvm_execute_instr(TVM *tvm) {
       return TRAP_STACK_UNDERFLOW;
     }
 
-    int cond = tvm->stack[--tvm->sp];
+    int64_t cond = tvm->stack[--tvm->sp].bits;
     if (cond == 0) {
-      if (instr.operand < 0 || instr.operand >= tvm->program_size) {
+      if (instr.operand.i64 < 0 || instr.operand.i64 >= tvm->program_size) {
         return TRAP_ILLEGAL_INSTR_ACCESS;
       }
-      tvm->ip = instr.operand;
+      tvm->ip = instr.operand.i64;
     } else {
       tvm->ip++;
     }
@@ -199,59 +318,100 @@ Trap tvm_execute_instr(TVM *tvm) {
       return TRAP_STACK_UNDERFLOW;
     }
 
-    int cond = tvm->stack[--tvm->sp];
+    int64_t cond = tvm->stack[--tvm->sp].bits;
     if (cond != 0) {
-      if (instr.operand < 0 || instr.operand >= tvm->program_size) {
+      if (instr.operand.i64 < 0 || instr.operand.i64  >= tvm->program_size) {
         return TRAP_ILLEGAL_INSTR_ACCESS;
       }
-      tvm->ip = instr.operand;
+      tvm->ip = instr.operand.i64;
     } else {
       tvm->ip++;
     }
     break;
   }
 
-  case OP_LT: {
+  case OP_LT_INT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
 
-    int a = tvm->stack[--tvm->sp];
-    int b = tvm->stack[--tvm->sp];
+    int64_t a = tvm->stack[--tvm->sp].bits;
+    int64_t b = tvm->stack[--tvm->sp].bits;
 
-    tvm->stack[tvm->sp++] = (b < a) ? 1 : 0;
+    tvm->stack[tvm->sp++] = (StackValue){.bits = (b < a) ? 1 : 0, .is_float = false};
     tvm->ip++;
     break;
   }
 
-  case OP_GT: {
+
+  case OP_LT_FLOAT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
 
-    int64_t a = tvm->stack[--tvm->sp];
-    int64_t b = tvm->stack[--tvm->sp];
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
 
-    tvm->stack[tvm->sp++] = (b > a) ? 1 : 0;
+    tvm->stack[tvm->sp++] =(StackValue){.bits =  (b < a) ? 1 : 0, .is_float = false};
     tvm->ip++;
     break;
   }
 
-  case OP_EQ: {
+
+  case OP_GT_INT: {
     if (tvm->sp < 2) {
       return TRAP_STACK_UNDERFLOW;
     }
 
-    int64_t a = tvm->stack[--tvm->sp];
-    int64_t b = tvm->stack[--tvm->sp];
+    int64_t a = tvm->stack[--tvm->sp].bits;
+    int64_t b = tvm->stack[--tvm->sp].bits;
 
-    tvm->stack[tvm->sp++] = (b == a) ? 1 : 0;
+    tvm->stack[tvm->sp++] = (StackValue){.bits = (b > a) ? 1 : 0, .is_float = false};
     tvm->ip++;
     break;
   }
 
-  case OP_HALT: {
-    tvm->halt = true;
+  
+  case OP_GT_FLOAT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
+
+    tvm->stack[tvm->sp++] = (StackValue){.bits = (b > a) ? 1 : 0, .is_float = false};
+    tvm->ip++;
+    break;
+  }
+
+
+
+
+  case OP_EQ_INT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+
+    int64_t a = tvm->stack[--tvm->sp].bits;
+    int64_t b = tvm->stack[--tvm->sp].bits;
+
+    tvm->stack[tvm->sp++] =(StackValue) {.bits = (b == a) ? 1 : 0, .is_float = false} ;
+    tvm->ip++;
+    break;
+  }
+
+  
+  case OP_EQ_FLOAT: {
+    if (tvm->sp < 2) {
+      return TRAP_STACK_UNDERFLOW;
+    }
+
+    double a = bits_to_f64(tvm->stack[--tvm->sp].bits);
+    double b = bits_to_f64(tvm->stack[--tvm->sp].bits);
+
+    tvm->stack[tvm->sp++] = (StackValue){.bits = (b == a) ? 1 : 0, .is_float = false};
+    tvm->ip++;
     break;
   }
 
@@ -259,30 +419,53 @@ Trap tvm_execute_instr(TVM *tvm) {
     if (tvm->sp < 1) {
       return TRAP_STACK_UNDERFLOW;
     }
-    Memory_addr addr = (Memory_addr)instr.operand;
+    Memory_addr addr = (Memory_addr)instr.operand.i64;
     if (addr > HEAP_SIZE - sizeof(int64_t)) {
       return TRAP_ILLEGAL_MEMORY_ACCESS;
     }
-    int64_t val = tvm->stack[--tvm->sp];
+    int64_t val = tvm->stack[--tvm->sp].bits;
     memcpy(&tvm->memory[addr], &val, sizeof(val));
     tvm->ip++;
     break;
   }
 
-  case OP_LOAD: {
+
+  case OP_LOAD_INT: {
     if (tvm->sp >= STACK_SIZE) {
       return TRAP_STACK_OVERFLOW;
     }
-    Memory_addr addr = (Memory_addr)instr.operand;
+    Memory_addr addr = (Memory_addr)instr.operand.i64;
     if (addr > HEAP_SIZE - sizeof(int64_t)) {
       return TRAP_ILLEGAL_MEMORY_ACCESS;
     }
     int64_t val;
     memcpy(&val, &tvm->memory[addr], sizeof(val));
-    tvm->stack[tvm->sp++] = val;
+    tvm->stack[tvm->sp++] = (StackValue){.bits = val, .is_float = false};
     tvm->ip++;
     break;
   }
+
+  case OP_LOAD_FLOAT: {
+    if (tvm->sp >= STACK_SIZE) {
+      return TRAP_STACK_OVERFLOW;
+    }
+    Memory_addr addr = (Memory_addr)instr.operand.i64;
+    if (addr > HEAP_SIZE - sizeof(int64_t)) {
+      return TRAP_ILLEGAL_MEMORY_ACCESS;
+    }
+    int64_t val;
+    memcpy(&val, &tvm->memory[addr], sizeof(val));
+    tvm->stack[tvm->sp++] = (StackValue){.bits = val, .is_float = true};
+    tvm->ip++;
+    break;
+  }
+
+  case OP_HALT:{
+      tvm->halt = true;
+      break;
+    }
+
+
   default:
     return TRAP_ILLEGAL_INSTR;
   }
@@ -292,10 +475,15 @@ Trap tvm_execute_instr(TVM *tvm) {
 void tvm_dump(TVM *tvm) {
   printf("Stack: \n");
   if (tvm->sp == 0) {
-    printf("   [empty]\n`");
+    printf("   [empty]\n");
   } else {
     for (int i = 0; i < tvm->sp; i++) {
-      printf("   %lld\n", (long long)tvm->stack[i]);
+      if(tvm->stack[i].is_float == false)
+      {
+        printf("   %lld\n", (long long)tvm->stack[i].bits);
+      }else{
+        printf("   %g\n", bits_to_f64(tvm->stack[i].bits));
+      }
     }
   }
 }
@@ -331,41 +519,6 @@ void tvm_free(TVM* tvm)
 }
 
 
-//example for factorial of 5
-Instruction program[] = {
-    {OP_PUSH, 1},  // 0: accumulator = 1
-    {OP_STORE, 0}, // 1: memory[0] = 1
-
-    {OP_PUSH, 5},  // 2: n = 5
-    {OP_STORE, 8}, // 3: memory[8] = 5
-
-    // LOOP_START (адрес 4):
-    {OP_LOAD, 8}, // 4: load n
-    {OP_PUSH, 1}, // 5:
-    {OP_LT},      // 6: n < 1?
-    {OP_JNZ, 17}, // 7: if yes exit
-
-    // accumulator *= n
-    {OP_LOAD, 0},  // 8: load accumulator
-    {OP_LOAD, 8},  // 9: load n
-    {OP_MULT},     // 10: accumulator * n
-    {OP_STORE, 0}, // 11: memory[0] = accumulator * n
-
-    // n--
-    {OP_LOAD, 8},  // 12: load n
-    {OP_PUSH, 1},  // 13:
-    {OP_MINUS},    // 14: n - 1
-    {OP_STORE, 8}, // 15: memory[8] = n - 1
-
-    {OP_JMP, 4}, // 16: jump LOOP_START
-
-    // EXIT:
-    {OP_LOAD, 0}, // 17: load result
-    {OP_HALT}     // 18:
-};
 int main() {
-  TVM* tvm = tvm_init(program, ARRAY_SIZE(program));
-  tvm_run_program(tvm);
-  tvm_free(tvm);
   return 0;
 }
