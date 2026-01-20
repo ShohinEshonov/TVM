@@ -45,6 +45,7 @@ typedef struct {
   uint16_t program_size;
   uint16_t ip;
   uint8_t memory[HEAP_SIZE];
+//  uint32_t mp;
   bool halt;
 } TVM;
 

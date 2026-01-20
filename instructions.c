@@ -39,6 +39,10 @@ const Instr_def INSTR_DEFS[]={
 	{OP_INT_TO_FLOAT, "int_to_float", false, OPERAND_NONE},
 	{OP_FLOAT_TO_INT, "float_to_int", false, OPERAND_NONE},
 
+	//{OP_ALLOC, "alloc", true, OPERAND_INT},
+	//{OP_MEM_WRITE, "mem_write", false, OPERAND_NONE},
+	//{OP_MEM_FREE, "mem_free", false, OPERAND_NONE},
+	//TODO: add stack frames and then add memory alloc free write
 	{OP_HALT, "halt", false, OPERAND_NONE},
 };
 
@@ -47,7 +51,7 @@ const size_t INSTR_DEFS_COUNT = sizeof(INSTR_DEFS) / sizeof(INSTR_DEFS[0]);
 
 
 const Instr_def* instr_def_by_name(const char* name){
-	for(int i = 0; i < INSTR_DEFS_COUNT; i++)
+	for(size_t i = 0; i < INSTR_DEFS_COUNT; i++)
 	{
 		if(strcmp(INSTR_DEFS[i].name, name)==0)
 		{
@@ -58,7 +62,7 @@ const Instr_def* instr_def_by_name(const char* name){
 }
 
 const Instr_def* instr_def_by_type(Instr_type type){
-	for(int i = 0; i < INSTR_DEFS_COUNT; i++)
+	for(size_t i = 0; i < INSTR_DEFS_COUNT; i++)
 	{
 		if(INSTR_DEFS[i].type == type)
 		{

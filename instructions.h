@@ -45,7 +45,11 @@ typedef enum {
 
   OP_INT_TO_FLOAT,
   OP_FLOAT_TO_INT,
-
+  
+ // OP_ALLOC,
+  //OP_MEM_WRITE,
+  //OP_MEM_FREE,
+  //TODO: add stack frames and then memory alloc free write
   OP_HALT,
 } Instr_type;
 
