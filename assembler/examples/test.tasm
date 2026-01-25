@@ -1,0 +1,3 @@
+push_int 10
+push_int 20
+plus_int
