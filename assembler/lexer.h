@@ -28,18 +28,26 @@ typedef struct{
 
 
 typedef enum {
-  INVALID_CHAR,
+  UNEXPECTED_CHAR,
   UNKNOWN_IDENTIFIER,
   INVALID_NUMBER,
   UNEXPECTED_EOF,
 }ErrorType;
 
 
+
 typedef struct{
-  ErrorType error;
+  char *start;
+  size_t length;
+}LexemeView;
+
+
+
+typedef struct{
+  ErrorType type;
   int column;
   int line;
-  char *lexeme;
+  LexemeView lexeme;
 }Error;
 
 
@@ -48,6 +56,7 @@ typedef struct{
 typedef struct {
     char *source;
     DynamicArray tokens;
+    DynamicArray Error;
     int start;
     int current;
     int line;

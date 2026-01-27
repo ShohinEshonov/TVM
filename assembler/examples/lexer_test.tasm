@@ -1,0 +1,35 @@
+push_int 42
+push_float 3.14
+pop
+dup
+plus_int
+minus_int
+mult_int
+div_int
+plus_float
+minus_float
+mult_float
+div_float
+jmp 10
+jz 20
+jnz 30
+lt_int
+gt_int
+eq_int
+lt_float
+gt_float
+eq_float
+store 100
+load_int 200
+load_float 300
+int_to_float
+float_to_int
+halt
+
+push_int 123.
+push_float 3.a
+unknown_instr 10
+divv 5
+123abc
+mult_int $5
+
