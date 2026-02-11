@@ -10,18 +10,18 @@
 
 
 
-void free_token_array(DynamicArray *arr)
-{
-    for(size_t i = 0; i < arr->length; i++)
-    {
-        Token *t = (Token*)get_element(arr, i);
-        if(t->type == TOKEN_INSTRUCTION)
-        {
-            free(t->value.string_value);
-        }
-    }
-    free_array(arr);
-}
+// void free_token_array(DynamicArray *arr)
+// {
+//     for(size_t i = 0; i < arr->length; i++)
+//     {
+//         Token *t = (Token*)get_element(arr, i);
+//         if(t->type == TOKEN_INSTRUCTION)
+//         {
+//             free(t);
+//         }
+//     }
+//     free_array(arr);
+// }
 
 
 static Error construct_error(ErrorType type, int line,int column, LexemeView *lexeme)
@@ -182,10 +182,12 @@ static void scan_number(Lexer *lexer)
     char *num_str = strndup(&lexer->source[lexer->start], lexer->current - lexer->start);
     if(type == TOKEN_INT)
     {
-        Token token = {.type = type, .value.int_value = atoll(num_str), .line = lexer->line };
+        LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start};
+        Token token = {.type = type, .lexeme = lexeme, .line = lexer->line };
         add_element(&lexer->tokens, &token);
     }else{
-        Token token = {.type = type, .value.float_value = atof(num_str), .line = lexer->line };
+        LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start};
+        Token token = {.type = type, .lexeme = lexeme, .line = lexer->line };
         add_element(&lexer->tokens, &token);
     }
     free(num_str);
@@ -210,16 +212,17 @@ static void scan_instruction(Lexer *lexer)
 
     if(instr != NULL)
     {
-        Token token = {.type = TOKEN_INSTRUCTION, .value.string_value = instruction_str, .line = lexer->line};
+        LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start};
+        Token token = {.type = TOKEN_INSTRUCTION, .lexeme = lexeme, .line = lexer->line};
         add_element(&lexer->tokens, &token);
     }else
     {
         LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start };
         Error err = construct_error(UNEXPECTED_CHAR, lexer->line, lexer->start, &lexeme );
-	add_element(&lexer->Error, &err);
+        add_element(&lexer->Error, &err);
         panic_mode(lexer);
-        free(instruction_str);
     }
+    free(instruction_str);
 }
 
 
@@ -235,10 +238,10 @@ static void scan_token(Lexer *lexer)
     }else if(c == '\n'){
         lexer->line++;
     }else{
-	LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = 1};
-	Error err = construct_error(UNEXPECTED_CHAR, lexer->line, lexer->current, &lexeme);
-	add_element(&lexer->Error, &err);
-	panic_mode(lexer);
+	      LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = 1};
+	      Error err = construct_error(UNEXPECTED_CHAR, lexer->line, lexer->current, &lexeme);
+	      add_element(&lexer->Error, &err);
+	      panic_mode(lexer);
     }   
 }
 

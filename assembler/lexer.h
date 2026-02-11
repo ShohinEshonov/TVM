@@ -14,17 +14,6 @@ typedef enum {
 }TokenType;
 
 
-typedef struct{
-  TokenType type;
-  union {
-    int64_t int_value;
-    double float_value;
-    char *string_value;
-  } value;
-  int line;
-}Token;
-
-
 
 
 typedef enum {
@@ -50,6 +39,13 @@ typedef struct{
   LexemeView lexeme;
 }Error;
 
+
+
+typedef struct{
+  TokenType type;
+  LexemeView lexeme;
+  int line;
+}Token;
 
 
 
