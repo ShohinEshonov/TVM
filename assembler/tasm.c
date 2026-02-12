@@ -1,11 +1,11 @@
 #include "dynamic_array.h"
 #include "lexer.h"
-// #include "parser.h"
+#include "parser.h"
+#include "codegen.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 bool check_extension(char *filename, char *extension) {
   char *dot = strrchr(filename, '.');
   if (!dot)
@@ -117,10 +117,10 @@ int main(int argc, char *argv[]) {
     switch (t->type) {
         case TOKEN_INT:
         case TOKEN_FLOAT: {
-            // Если у тебя int/float — можно парсить из исходного текста
             if (t->type == TOKEN_INT) {
                 printf(", int_value=%.*s", (int)t->lexeme.length, t->lexeme.start);
-            } else {
+            } else if (t->type == TOKEN_FLOAT){
+                printf(", float value = %.*s", (int)t->lexeme.length, t->lexeme.start);
             }
             break;
         }
@@ -136,40 +136,40 @@ int main(int argc, char *argv[]) {
     printf("\n");
   }
 
-  free_array(&tokens);  
+
+  Parser *parser = init_parser(&tokens);
+  DynamicArray instrs = parse_tokens(parser);
+
+
+  printf("\n=== Parsed Instructions ===\n");
+
+  for (size_t i = 0; i < instrs.length; i++) {
+    Instruction *instr = (Instruction *)get_element(&instrs, i);
+    const Instr_def *def = instr_def_by_type(instr->type);
+
+    printf("Instruction %zu: ", i);
+
+    if (def != NULL) {
+      printf("name='%s'", def->name);
+
+      if (def->has_operand) {
+        if (def->operand_type == OPERAND_INT) {
+          printf(", operand=%ld (int)", instr->operand.i64);
+        } else if (def->operand_type == OPERAND_FLOAT) {
+          printf(", operand=%f (float)", instr->operand.f64);
+        }
+      }
+    } else {
+      printf("type=%d (unknown)", instr->type);
+    }
+
+    printf("\n");
+  }
+
+  codegen(output_file, &instrs);
+  
+  free_array(&tokens);    
+  free_array(&instrs);
   free(source_code);
-
-  // Parser *parser = init_parser(&tokens);
-  // DynamicArray instrs = parse_tokens(parser);
-
-
-  // printf("\n=== Parsed Instructions ===\n");
-
-  // for (size_t i = 0; i < instrs.length; i++) {
-  //   Instruction *instr = (Instruction *)get_element(&instrs, i);
-  //   const Instr_def *def = instr_def_by_type(instr->type);
-
-  //   printf("Instruction %zu: ", i);
-
-  //   if (def != NULL) {
-  //     printf("name='%s'", def->name);
-
-  //     if (def->has_operand) {
-  //       if (def->operand_type == OPERAND_INT) {
-  //         printf(", operand=%ld (int)", instr->operand.i64);
-  //       } else if (def->operand_type == OPERAND_FLOAT) {
-  //         printf(", operand=%f (float)", instr->operand.f64);
-  //       }
-  //     }
-  //   } else {
-  //     printf("type=%d (unknown)", instr->type);
-  //   }
-
-  //   printf("\n");
-  // }
-
-  // free_array(&instrs);
-  // free_token_array(&tokens);  
-  // free(source_code);
   return 0;
 }

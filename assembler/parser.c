@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 static Token *next_token(Parser *parser)
@@ -22,7 +23,8 @@ static Token *peek(Parser *parser)
 
 static void parse_instruction(Token *token, Parser *parser)
 {
-    const Instr_def *instr_def = instr_def_by_name(token->value.string_value);
+    char *instruction_str = strndup(token->lexeme.start, token->lexeme.length);
+    const Instr_def *instr_def = instr_def_by_name(instruction_str);
     if(instr_def->has_operand)
     {
         if(instr_def->operand_type == OPERAND_INT)
@@ -35,7 +37,8 @@ static void parse_instruction(Token *token, Parser *parser)
             }else
             {
                 Token *operand = next_token(parser);
-                Instruction instr = {.type = instr_def->type, .operand.i64 = operand->value.int_value};
+                char *operand_str = strndup(operand->lexeme.start, operand->lexeme.length);
+                Instruction instr = {.type = instr_def->type, .operand.i64 = atoll(operand_str)};
                 add_element(&parser->program, &instr);
             }
         }else if(instr_def->operand_type == OPERAND_FLOAT){
@@ -48,7 +51,8 @@ static void parse_instruction(Token *token, Parser *parser)
             else
             {
                 Token *operand = next_token(parser);
-                Instruction instr = {.type = instr_def->type, .operand.f64 = operand->value.float_value};
+                char *operand_str = strndup(operand->lexeme.start, operand->lexeme.length);
+                Instruction instr = {.type = instr_def->type, .operand.f64 = atof(operand_str)};
                 add_element(&parser->program, &instr);
             }
         }

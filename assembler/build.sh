@@ -3,7 +3,7 @@
 
 CC=gcc
 
-SOURCE_FILES="dynamic_array.c lexer.c tasm.c ../instructions.c"
+SOURCE_FILES="dynamic_array.c lexer.c parser.c codegen.c tasm.c ../instructions.c"
 CFLAGS="-Wall -Wextra -g"
 OUTPUT_EXEC="tasm"
 
