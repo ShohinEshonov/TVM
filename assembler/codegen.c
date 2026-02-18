@@ -1,12 +1,15 @@
 #include "dynamic_array.h"
 #include "parser.h"
 #include "stdio.h"
-
+#include "../format.h"
 
 
 void codegen(char *output_file, DynamicArray *instructions)
 {
   FILE *output = fopen(output_file, "wb");
+  fwrite(MAGIC, 1, MAGIC_SIZE, output);
+  fwrite(&instructions->length, 1, sizeof(uint16_t), output);
+
   for(int i = 0; i < instructions->length; i++)
   {
     Instruction *instr = (Instruction *) get_element(instructions, i);

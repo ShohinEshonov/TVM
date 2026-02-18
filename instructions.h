@@ -5,6 +5,7 @@
 
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 typedef enum {
@@ -52,6 +53,19 @@ typedef enum {
   //TODO: add stack frames and then memory alloc free write
   OP_HALT,
 } Instr_type;
+
+
+
+typedef union {
+  int64_t i64;
+  double f64;
+}Operand;
+
+typedef struct {
+  Instr_type type;
+  Operand operand;
+} Instruction;
+
 
 
 typedef enum {

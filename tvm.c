@@ -1,11 +1,12 @@
 #include "tvm.h"
 #include <assert.h>
+#include <bits/types/cookie_io_functions_t.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include "file_handler.h"
 
 
 int64_t f64_to_bits(double val){
@@ -462,4 +463,18 @@ void tvm_free(TVM* tvm)
 }
 
 
+int main(int argc, char *argv[])
+{
+    char *input_file = NULL;
 
+    if (argc < 2) {
+      fprintf(stderr, "Usage: tvm <input file.bin>");
+      return 1;
+    }
+    input_file = argv[1];    
+    FILE *input_binary = open_file(input_file);    
+    Header input_header =  read_header(input_binary);
+    Instruction *program = read_file(input_binary, input_header.prog_size);
+    TVM *tvm = tvm_init(program, input_header.prog_size);
+    tvm_run_program(tvm);   
+}

@@ -23,15 +23,15 @@ typedef enum {
   TRAP_TYPE_MISMATCH,
 } Trap;
 
-typedef union {
-  int64_t i64;
-  double f64;
-}Operand;
+// typedef union {
+//   int64_t i64;
+//   double f64;
+// }Operand;
 
-typedef struct {
-  Instr_type type;
-  Operand operand;
-} Instruction;
+// typedef struct {
+//   Instr_type type;
+//   Operand operand;
+// } Instruction;
 
 typedef struct{
   int64_t bits;

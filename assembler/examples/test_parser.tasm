@@ -2,15 +2,7 @@ push_int 42
 push_float 3.14
 pop
 dup
-plus_int
-minus_int
-mult_int
-div_int
-plus_float
-minus_float
-mult_float
-div_float
-jmp 10
+jmp 1
 jz 20
 jnz 30
 lt_int
@@ -19,3 +11,4 @@ int_to_float
 push_int 45
 pop
 dup
+halt

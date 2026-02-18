@@ -3,9 +3,9 @@
 
 CC=gcc
 
-SOURCE_FILES="main.c tvm.c instructions.c"
+SOURCE_FILES="tvm.c instructions.c file_handler.c"
 CFLAGS="-Wall -Wextra -g"
-OUTPUT_EXEC="main"
+OUTPUT_EXEC="tvm"
 
 $CC $SOURCE_FILES -o $OUTPUT_EXEC $CFLAGS
 
