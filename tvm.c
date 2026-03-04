@@ -1,12 +1,12 @@
 #include "tvm.h"
 #include <assert.h>
-#include <bits/types/cookie_io_functions_t.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "file_handler.h"
+#include "isa/isa.h"
 
 
 int64_t f64_to_bits(double val){
@@ -39,7 +39,8 @@ char *trap_to_cstr(Trap trap) {
     return "TRAP_STACK_UNDERFLOW";
   case TRAP_DIVISION_BY_ZERO:
     return "TRAP_DIVISION_BY_ZERO";
-
+  case TRAP_TYPE_MISMATCH:
+    return "TRAP_TYPE_MISSMATCH";
   default:
     return "UNKNOWN_TRAP";
   }

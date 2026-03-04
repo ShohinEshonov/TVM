@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "format.h" 
-#include "instructions.h"
+#include "bytecode/bytecode_format.h"
 
 bool check_extension(char *filename, char *extension);
 Header read_header(FILE *file);

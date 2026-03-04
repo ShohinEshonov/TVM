@@ -1,5 +1,6 @@
 #include "format.h"
-#include "instructions.h"
+#include "isa/isa_table.h"
+#include "bytecode/bytecode_format.h"
 #include "tvm.h"
 #include <stdio.h>
 #include <stdint.h>

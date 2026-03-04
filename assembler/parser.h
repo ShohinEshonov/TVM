@@ -3,7 +3,7 @@
 
 
 #include "dynamic_array.h"
-#include "../instructions.h"
+#include "../isa/isa_table.h"
 
 typedef struct{
     DynamicArray tokens;

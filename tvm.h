@@ -2,7 +2,8 @@
 #define TVM_H
 
 #include <stdint.h>
-#include "instructions.h"
+#include <stdbool.h>
+#include "bytecode/bytecode_format.h"
 
 #define STACK_SIZE 1024
 #define HEAP_SIZE 4 * (1024 * 1024)

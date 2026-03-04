@@ -4,24 +4,44 @@
 #include "lexer.h"
 #include <stdbool.h>
 #include <ctype.h>
-#include "../instructions.h"
 #include "dynamic_array.h"
+#include "token_types.h"
+
+#define ARRAY_SIZE(xs) sizeof(xs)/sizeof(xs[0])
 
 
+char *mnemonics[] =
+{
+  "push_i",
+  "push_f",
+  "pop",
+  "dup",
+  "plus_i",
+  "plus_f",
+  "minus_i",
+  "minus_f",
+  "mult_i",
+  "mult_f",
+  "div_i",
+  "div_f",
+  "jmp", 
+  "jz", 
+  "jnz", 
+  "lt_i", 
+  "lt_f", 
+  "gt_i", 
+  "gt_f", 
+  "eq_i", 
+  "eq_f", 
+  "store", 
+  "load_i", 
+  "load_f", 
+  "i2f", 
+  "f2i", 
+  "halt", 
+};
 
 
-// void free_token_array(DynamicArray *arr)
-// {
-//     for(size_t i = 0; i < arr->length; i++)
-//     {
-//         Token *t = (Token*)get_element(arr, i);
-//         if(t->type == TOKEN_INSTRUCTION)
-//         {
-//             free(t);
-//         }
-//     }
-//     free_array(arr);
-// }
 
 
 static Error construct_error(ErrorType type, int line,int column, LexemeView *lexeme)
@@ -80,11 +100,6 @@ static void print_errors(DynamicArray *arr)
     }
     free_array(arr);
 }
-
-
-
-
-
 
 Lexer *init_lexer(char *source)
 {
@@ -160,7 +175,7 @@ static void scan_number(Lexer *lexer)
             Error error = construct_error(UNEXPECTED_CHAR, lexer->line, lexer->current, &lexeme);
             add_element(&lexer->Error,&error);
             panic_mode(lexer);
-	    return;
+      	    return;
         }
         
         while(isdigit((unsigned char) peek(lexer)))
@@ -193,36 +208,50 @@ static void scan_number(Lexer *lexer)
     free(num_str);
  }
 
-static void scan_instruction(Lexer *lexer)
+static void scan_identifier(Lexer *lexer)
 {
-    while(isalpha((unsigned char)peek(lexer)) || peek(lexer) == '_')
+    while(isalpha((unsigned char)peek(lexer)) || peek(lexer) == '_' || isdigit((unsigned char)peek(lexer)))
     {
-	if(is_at_end(lexer))
-	{
-	    Error err = construct_error(UNEXPECTED_EOF, lexer->line, lexer->current, NULL);
-	    add_element(&lexer->Error, &err);
-	    return;
-	}
+	    if(is_at_end(lexer))
+	    {
+	        Error err = construct_error(UNEXPECTED_EOF, lexer->line, lexer->current, NULL);
+	        add_element(&lexer->Error, &err);
+	        return;
+	    }
         advance(lexer);
     }
 
-    char *instruction_str = strndup(&lexer->source[lexer->start], lexer->current - lexer->start);
-
-    const Instr_def *instr = instr_def_by_name(instruction_str);
-
-    if(instr != NULL)
+    char *identifier_str = strndup(&lexer->source[lexer->start], lexer->current - lexer->start);
+    
+    LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start};
+    TokenType type = TOKEN_IDENTIFIER;
+    for(size_t i = 0; i < ARRAY_SIZE(mnemonics); i++)
     {
-        LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start};
-        Token token = {.type = TOKEN_INSTRUCTION, .lexeme = lexeme, .line = lexer->line};
-        add_element(&lexer->tokens, &token);
-    }else
-    {
-        LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start };
-        Error err = construct_error(UNEXPECTED_CHAR, lexer->line, lexer->start, &lexeme );
-        add_element(&lexer->Error, &err);
-        panic_mode(lexer);
+        if(strcmp(identifier_str, mnemonics[i]) == 0)
+        {
+            type = TOKEN_MNEMONIC;
+            break;
+        }
     }
-    free(instruction_str);
+
+    Token token = {.type = type, .lexeme = lexeme, .line = lexer->line};
+    add_element(&lexer->tokens, &token);
+    free(identifier_str);
+    // const Instr_def *instr = instr_def_by_name(instruction_str);
+
+    // if(instr != NULL)
+    // {
+    //     LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start};
+    //     Token token = {.type = TOKEN_INSTRUCTION, .lexeme = lexeme, .line = lexer->line};
+    //     add_element(&lexer->tokens, &token);
+    // }else
+    // {
+    //     LexemeView lexeme = {.start = &lexer->source[lexer->start], .length = lexer->current - lexer->start };
+    //     Error err = construct_error(UNEXPECTED_CHAR, lexer->line, lexer->start, &lexeme );
+    //     add_element(&lexer->Error, &err);
+    //     panic_mode(lexer);
+    // }
+    // free(instruction_str);
 }
 
 
@@ -233,7 +262,7 @@ static void scan_token(Lexer *lexer)
     if(isdigit((unsigned char)c)){
         scan_number(lexer);        
     }else if(isalpha((unsigned char)c)){
-        scan_instruction(lexer);
+        scan_identifier(lexer);
     }else if(c == ' ' ||c == '\t'|| c == '\r'){   
     }else if(c == '\n'){
         lexer->line++;

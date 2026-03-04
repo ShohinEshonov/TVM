@@ -2,10 +2,13 @@
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
+#include "../bytecode/bytecode_format.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+
 bool check_extension(char *filename, char *extension) {
   char *dot = strrchr(filename, '.');
   if (!dot)
@@ -124,12 +127,15 @@ int main(int argc, char *argv[]) {
             }
             break;
         }
-        case TOKEN_INSTRUCTION: {
-            printf(", instruction='%.*s'", (int)t->lexeme.length, t->lexeme.start);
+        case TOKEN_IDENTIFIER: {
+            printf(", identifier='%.*s'", (int)t->lexeme.length, t->lexeme.start);
             break;
         }
         case TOKEN_EOF:
             printf(" (EOF)");
+            break;
+        default:
+            printf(", instruction='%.*s'", (int)t->lexeme.length, t->lexeme.start);
             break;
     }
 
@@ -141,12 +147,17 @@ int main(int argc, char *argv[]) {
   DynamicArray instrs = parse_tokens(parser);
 
 
+
+  printf("element_size=%zu, sizeof(Instruction)=%zu\n", 
+       parser->program.element_size, sizeof(Instruction));
+
   printf("\n=== Parsed Instructions ===\n");
 
   for (size_t i = 0; i < instrs.length; i++) {
     Instruction *instr = (Instruction *)get_element(&instrs, i);
+    printf("DEBUG type=%d\n", instr->type);  // ← добавь
     const Instr_def *def = instr_def_by_type(instr->type);
-
+    printf("DEBUG def=%p\n", (void*)def);    // ← добавь
     printf("Instruction %zu: ", i);
 
     if (def != NULL) {

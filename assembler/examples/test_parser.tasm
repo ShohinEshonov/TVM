@@ -1,14 +1,11 @@
-push_int 42
-push_float 3.14
+push_i 42
+push_f 3.14
 pop
 dup
-jmp 1
-jz 20
-jnz 30
-lt_int
-float_to_int
-int_to_float
-push_int 45
+lt_i
+f2i
+i2f
+push_i 45
 pop
 dup
 halt

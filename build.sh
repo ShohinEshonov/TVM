@@ -3,7 +3,7 @@
 
 CC=gcc
 
-SOURCE_FILES="tvm.c instructions.c file_handler.c"
+SOURCE_FILES="tvm.c ./isa/isa_table.c file_handler.c"
 CFLAGS="-Wall -Wextra -g"
 OUTPUT_EXEC="tvm"
 

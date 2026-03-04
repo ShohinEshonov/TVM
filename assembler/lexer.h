@@ -5,14 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "dynamic_array.h"
-
-typedef enum {
-  TOKEN_INT,
-  TOKEN_FLOAT,
-  TOKEN_INSTRUCTION,
-  TOKEN_EOF,
-}TokenType;
-
+#include "token_types.h"
 
 
 
