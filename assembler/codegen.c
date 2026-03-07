@@ -1,20 +1,19 @@
-#include "dynamic_array.h"
 #include <stdio.h>
 #include "../format.h"
 #include "../bytecode/bytecode_format.h"
 #include "../isa/isa_table.h"
+#include "parser.h"
 
 
-
-void codegen(char *output_file, DynamicArray *instructions)
+void codegen(char *output_file, Parser *parser)
 {
   FILE *output = fopen(output_file, "wb");
   fwrite(MAGIC, 1, MAGIC_SIZE, output);
-  fwrite(&instructions->length, 1, sizeof(uint16_t), output);
+  fwrite(&parser->lc, 1, sizeof(uint16_t), output);
 
-  for(size_t i = 0; i < instructions->length; i++)
+  for(size_t i = 0; i < parser->lc; i++)
   {
-    Instruction *instr = (Instruction *) get_element(instructions, i);
+    Instruction *instr = &parser->program[i];
     Instr_def const *instr_def = instr_def_by_type(instr->type);
     if(instr_def->has_operand)
     {

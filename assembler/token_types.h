@@ -7,6 +7,9 @@ typedef enum {
 
   TOKEN_IDENTIFIER,
   TOKEN_MNEMONIC,
+  TOKEN_COLON,
+
+
   TOKEN_EOF,
 }TokenType;
 

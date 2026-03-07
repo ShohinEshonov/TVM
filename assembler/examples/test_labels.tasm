@@ -1,0 +1,7 @@
+main:
+    jmp loop
+    halt
+loop:
+    push_i 5
+    push_i 10
+    jmp main

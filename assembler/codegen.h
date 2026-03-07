@@ -2,10 +2,9 @@
 
 #define CODEGEN_H
 
+#include "parser.h"
 
-#include "dynamic_array.h"
 
-
-void codegen(char *output_file, DynamicArray *instructions);
+void codegen(char *output_file, Parser *parser);
 
 #endif

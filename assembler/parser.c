@@ -4,6 +4,7 @@
 #include "dynamic_array.h"
 #include "token_types.h"
 #include "parser.h"
+#include <features.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -54,6 +55,43 @@ struct {char *mnem ; OP_CODE op_code; } mnemonic_to_isa[] =
 };
 
 
+static Symbol* find_lexeme_table(DynamicArray *symbol_table, char *lexeme)
+{
+  for (size_t i = 0; i < symbol_table->length; i++)
+  {
+     Symbol *symbol = (Symbol*) get_element(symbol_table, i);
+     char* lexeme_table = strndup(symbol->token->lexeme.start, symbol->token->lexeme.length);
+     if(strcmp(lexeme, lexeme_table) == 0)
+     {
+       free(lexeme_table);
+       return symbol;
+     }
+     free(lexeme_table);
+  }
+  return NULL;
+}
+
+
+
+
+
+
+static bool is_lexeme_in_table(Parser* parser, char* lexeme)
+{
+  for (size_t i = 0; i < parser->symbol_table.length; i++)
+  {
+     Symbol *symbol = (Symbol*) get_element(&parser->symbol_table, i);
+     char* lexeme_table = strndup(symbol->token->lexeme.start, symbol->token->lexeme.length);
+     if(strcmp(lexeme, lexeme_table) == 0)
+     {
+         free(lexeme_table);
+         return true;
+     }
+     free(lexeme_table);
+  }
+  return false;
+}
+
 static Token *next_token(Parser *parser)
 {
     Token *t = get_element(&parser->tokens, parser->current);
@@ -61,9 +99,33 @@ static Token *next_token(Parser *parser)
     return t;
 }
 
-static Token *peek(Parser *parser)
+static TokenType peek(Parser *parser)
 {
-    return get_element(&parser->tokens, parser->current);
+    Token *token = (Token *) get_element(&parser->tokens, parser->current);
+    return token->type;
+}
+
+
+static void eat_token(Parser *parser)
+{
+    parser->current++;
+}
+
+
+static Symbol* parser_identifier(Token* t, Parser* parser)
+{
+    char *lexeme_identifier = strndup(t->lexeme.start, t->lexeme.length);
+    if(is_lexeme_in_table(parser, lexeme_identifier))
+    {
+        Symbol* symbol = find_lexeme_table(&parser->symbol_table, lexeme_identifier);
+        free(lexeme_identifier);
+        return symbol;  
+    }else
+    {
+        fprintf(stderr, "Undefined idnetifier: %s", lexeme_identifier);
+        free(lexeme_identifier);
+        exit(1);
+    }
 }
 
 
@@ -85,21 +147,30 @@ static void parse_mnemonic(Token *token, Parser *parser)
     {
         if(instr_def->operand_type == OPERAND_INT)
         {
-            Token *next = peek(parser);
-            if(next->type != TOKEN_INT)
+            TokenType next = peek(parser);
+            if(next == TOKEN_IDENTIFIER)
             {
-                fprintf(stderr, "Expected int but get unexpected token\n");
-                exit(1);
-            }else
+                Token* identifier = next_token(parser);
+                Symbol* symbol_identifier = parser_identifier(identifier, parser);
+                uint64_t operand = symbol_identifier->location;                             
+                Instruction instr = {.type = instruction_opcode, .operand.i64 = operand};
+                parser->program[parser->lc] = instr;
+            }else if(next == TOKEN_INT)
             {
                 Token *operand = next_token(parser);
                 char *operand_str = strndup(operand->lexeme.start, operand->lexeme.length);
                 Instruction instr = {.type = instruction_opcode, .operand.i64 = atoll(operand_str)};
-                add_element(&parser->program, &instr);
+                parser->program[parser->lc] = instr;
+                free(operand_str);
+            }else
+            {
+                fprintf(stderr, "Excepted int but get unexpected token\n");
+                exit(1);
             }
+            
         }else if(instr_def->operand_type == OPERAND_FLOAT){
-            Token *next = peek(parser);
-            if(next->type != TOKEN_FLOAT)
+            TokenType next = peek(parser);
+            if(next != TOKEN_FLOAT)
             {
                 fprintf(stderr,"Excpected float but get unexpected token\n");
                 exit(1);
@@ -109,15 +180,35 @@ static void parse_mnemonic(Token *token, Parser *parser)
                 Token *operand = next_token(parser);
                 char *operand_str = strndup(operand->lexeme.start, operand->lexeme.length);
                 Instruction instr = {.type = instruction_opcode, .operand.f64 = atof(operand_str)};
-                add_element(&parser->program, &instr);
+                parser->program[parser->lc] = instr;
+                free(operand_str);
             }
         }
     }else{
         Instruction instr = {.type = instruction_opcode};
-        add_element(&parser->program, &instr);
+        parser->program[parser->lc] = instr;
     }
     free(instruction_str);
 }
+
+
+static void parse_label(Token *t ,Parser *parser)
+{
+    char* symbol_lexeme = strndup(t->lexeme.start, t->lexeme.length);
+    if(is_lexeme_in_table(parser, symbol_lexeme))
+    {
+        fprintf(stderr, "Second define of 1 label %s", symbol_lexeme);
+        free(symbol_lexeme);
+        exit(1);
+    }else
+    {
+        Symbol sym = {.token = t,.location = parser->lc,.symbol_type = SYMBOL_LABEL};
+        add_element(&parser->symbol_table, &sym);
+    }
+    free(symbol_lexeme);
+}
+
+
 
 
 
@@ -126,19 +217,21 @@ static void parse_token(Parser *parser)
 
     Token *t = next_token(parser);
 
-
     switch(t->type)
     {
-        case(TOKEN_MNEMONIC):
-        
+        case(TOKEN_MNEMONIC):     
             parse_mnemonic(t, parser);
+            parser->lc++;
             break;  
-        
-        case(TOKEN_EOF):
-            break;
+
         case(TOKEN_IDENTIFIER):
-            fprintf(stderr, "Unknown identifier\n");
-            exit(1);
+            if(peek(parser) == TOKEN_COLON)
+            {
+                eat_token(parser);
+            }
+            break;
+                
+        case(TOKEN_EOF):
             break;
         default:
         {
@@ -150,6 +243,8 @@ static void parse_token(Parser *parser)
 
 
 
+
+
 static bool is_at_end(Parser *parser)
 {
     Token *t = get_element(&parser->tokens, parser->current);
@@ -157,18 +252,67 @@ static bool is_at_end(Parser *parser)
 }
 
 
-
-
-
-DynamicArray parse_tokens(Parser *parser)
+void first_pass(Parser *parser)
 {
+    while(!is_at_end(parser))
+    {
+        Token *t = next_token(parser);
+
+        if(t->type == TOKEN_IDENTIFIER)
+        {
+            if(peek(parser) == TOKEN_COLON)
+            {
+                parse_label(t, parser);
+                eat_token(parser);
+            }else{
+                add_element(&parser->unsolved_refs, t); 
+            }
+        }else if(t->type == TOKEN_MNEMONIC)
+        {
+            parser->lc++;
+        }
+    }
+}
+
+void solve_refs(Parser *parser)
+{
+    for(size_t i = 0; i < parser->unsolved_refs.length; i++)
+    {
+        Token *ref = (Token*)get_element(&parser->unsolved_refs, i); 
+        char* name = strndup(ref->lexeme.start, ref->lexeme.length);
+
+        if(!is_lexeme_in_table(parser, name))
+        {
+            fprintf(stderr, "Undefined identifier %s", name);
+            free(name);
+            exit(1);
+        }
+        free(name);
+    }
+}
+
+void parse_tokens(Parser *parser)
+{
+    if(parser->first_pass == false)
+    {
+        first_pass(parser);
+        solve_refs(parser);
+        parser->first_pass = true;
+        parser->current = 0;    
+    }
+    parser->program = malloc(parser->lc * sizeof(Instruction));
+    if(parser->program == NULL)
+    {
+        perror("Cannot allocate memory for parser");
+        exit(1);
+    }
+    parser->lc = 0;
     while(!is_at_end(parser))
     {
         parse_token(parser);
     }
-    DynamicArray instrs = parser->program;
-    free(parser);
-    return instrs;
+    free_array(&parser->symbol_table);
+    free_array(&parser->unsolved_refs); 
 }
 
 
@@ -182,8 +326,13 @@ Parser *init_parser(DynamicArray *tokens)
         exit(1);
     }
     parser->tokens = *tokens;
-    init_array(&parser->program, sizeof(Instruction), 16);
+    // init_array(&parser->program, sizeof(Instruction), 16);
+    init_array(&parser->symbol_table, sizeof(Symbol), 5);
+    init_array(&parser->unsolved_refs, sizeof(Token), 16);
+    parser->program = NULL;
     parser->current = 0;
+    parser->lc = 0;
+    parser->first_pass = false;
     return parser;    
 }
 

@@ -144,17 +144,15 @@ int main(int argc, char *argv[]) {
 
 
   Parser *parser = init_parser(&tokens);
-  DynamicArray instrs = parse_tokens(parser);
+  parse_tokens(parser);
 
 
 
-  printf("element_size=%zu, sizeof(Instruction)=%zu\n", 
-       parser->program.element_size, sizeof(Instruction));
 
   printf("\n=== Parsed Instructions ===\n");
 
-  for (size_t i = 0; i < instrs.length; i++) {
-    Instruction *instr = (Instruction *)get_element(&instrs, i);
+  for (size_t i = 0; i<parser->lc; i++) {
+    Instruction *instr = &parser->program[i];
     printf("DEBUG type=%d\n", instr->type);  // ← добавь
     const Instr_def *def = instr_def_by_type(instr->type);
     printf("DEBUG def=%p\n", (void*)def);    // ← добавь
@@ -177,10 +175,12 @@ int main(int argc, char *argv[]) {
     printf("\n");
   }
 
-  codegen(output_file, &instrs);
+  codegen(output_file, parser);
   
-  free_array(&tokens);    
-  free_array(&instrs);
+  free_array(&tokens);
+  free(parser->program);
+  free(parser);
   free(source_code);
+
   return 0;
 }

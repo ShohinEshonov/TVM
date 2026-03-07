@@ -263,7 +263,12 @@ static void scan_token(Lexer *lexer)
         scan_number(lexer);        
     }else if(isalpha((unsigned char)c)){
         scan_identifier(lexer);
-    }else if(c == ' ' ||c == '\t'|| c == '\r'){   
+    }else if(c == ':')
+    {
+        Token token = { .type = TOKEN_COLON, .line = lexer->line };
+        add_element(&lexer->tokens, &token); 
+    }
+    else if(c == ' ' ||c == '\t'|| c == '\r'){   
     }else if(c == '\n'){
         lexer->line++;
     }else{
