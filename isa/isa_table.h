@@ -9,18 +9,18 @@
 
 
 typedef enum {
-  OPERAND_NONE,
-  OPERAND_INT,
-  OPERAND_FLOAT,
-  OPERAND_ADDR,
+  TYPE_I64,
+  TYPE_U64,
+  TYPE_F64,
+  TYPE_U16,
+  TYPE_U8,  
 }Operand_type;
 
 
 typedef struct{
-  OP_CODE type;
-  const char* name;
-  bool has_operand;
-  Operand_type operand_type;
+  uint8_t operand_count;
+  Operand_type operand_type[3];
+  uint8_t byte_size;
 }Instr_def;
 
 
@@ -28,8 +28,8 @@ extern const Instr_def INSTR_DEFS[];
 extern const size_t INSTR_DEFS_COUNT;
 
 
-const Instr_def* instr_def_by_name(const char* name);
 const Instr_def* instr_def_by_type(OP_CODE type);
+uint8_t instr_size_by_type(OP_CODE type);
 
 
 #endif

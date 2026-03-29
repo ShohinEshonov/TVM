@@ -2,7 +2,6 @@
 #include "lexer.h"
 #include "parser.h"
 #include "codegen.h"
-#include "../bytecode/bytecode_format.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -151,25 +150,38 @@ int main(int argc, char *argv[]) {
 
   printf("\n=== Parsed Instructions ===\n");
 
-  for (size_t i = 0; i<parser->lc; i++) {
+  for (size_t i = 0; i<parser->ic; i++) {
     Instruction *instr = &parser->program[i];
-    printf("DEBUG type=%d\n", instr->type);  // ← добавь
-    const Instr_def *def = instr_def_by_type(instr->type);
+    printf("DEBUG type=%d\n", instr->opcode);  // ← добавь
+    const Instr_def *def = instr_def_by_type(instr->opcode);
     printf("DEBUG def=%p\n", (void*)def);    // ← добавь
     printf("Instruction %zu: ", i);
 
     if (def != NULL) {
-      printf("name='%s'", def->name);
+      printf("name='%d'", instr->opcode);
 
-      if (def->has_operand) {
-        if (def->operand_type == OPERAND_INT) {
-          printf(", operand=%ld (int)", instr->operand.i64);
-        } else if (def->operand_type == OPERAND_FLOAT) {
-          printf(", operand=%f (float)", instr->operand.f64);
+      if (def->operand_count > 0) {
+        for(int i = 0; i < def->operand_count; i++)
+        {
+          if (def->operand_type[i] == TYPE_I64) {
+            printf(", operand=%ld (int)", instr->operands[i].i64);
+          } else if (def->operand_type[i] == TYPE_U64) {
+            printf(", operand=%lu (uint64_t)", instr->operands[i].u64);
+          }else if(def->operand_type[i] == TYPE_U16)
+          {
+            printf(", operand=%u (uint16_t)", instr->operands[i].u16);
+          }else if(def->operand_type[i] == TYPE_U8)
+          {
+            printf(", operand=%u (uint8_t)", instr->operands[i].u8);
+          }
+          else if(def->operand_type[i] == TYPE_F64)
+          {
+            printf(", operand=%.5f (double)", instr->operands[i].f64);            
+          }
         }
       }
     } else {
-      printf("type=%d (unknown)", instr->type);
+      printf("type=%d (unknown)", instr->opcode);
     }
 
     printf("\n");
